@@ -6,6 +6,8 @@ import OrderItemModel from "../model/order-item.model";
 import OrderModel from "../model/order.model";
 
 export default class OrderRepository implements OrderRepositoryInterface {
+ 
+
     async create(entity: order): Promise<void> {
         await OrderModel.create(
             {
@@ -32,23 +34,50 @@ export default class OrderRepository implements OrderRepositoryInterface {
                 include: ["items"],
                 rejectOnEmpty: true
             })
-            await orderModel.update({
-                total: entity.total
-            })
+            
             const items = entity.items.map((item) => ({
                 id: item.id,
                 name: item.name,
                 price: item.price,
                 product_id: item.productId,
                 quantity: item.quantity,
+                order_id: entity.id
             }))
-            orderModel.$set("items", items)
+            items.map(async (item) => {
+                const itemOrder = await OrderItemModel.findOne({
+                    where: { id: item.id }
+                })
+                if(itemOrder){
+                   await itemOrder.update(item)
+                }else{
+                   await OrderItemModel.create(item)
+                }
+            })
+            await orderModel.update({
+                total: entity.total
+            })
        } catch (error) {
             throw new Error("Order not found")
        }
     }
-    delete(id: string): Promise<void> {
-        throw new Error("Method not implemented.");
+    async delete(id: string): Promise<void> {
+        try { 
+            OrderModel.beforeDestroy((instance: OrderModel) => {
+                instance.items.map((item) => item.destroy())
+            })
+            await OrderModel.destroy({
+                where: { id: id }
+            });
+        } catch (error) {
+            throw new Error("Order not found")
+        }
+        
+    }
+    _formatOrder(orderModel: OrderModel) : Order{
+        const orderItems = orderModel.items.map((item) => {
+            return new OrderItem(item.id, item.price, item.name, item.quantity,item.product_id)
+        })
+        return new Order(orderModel.id, orderModel.customer_id, orderItems)
     }
     async find(id: string): Promise<order> {
        try {
@@ -57,16 +86,14 @@ export default class OrderRepository implements OrderRepositoryInterface {
                 include: ["items"],
                 rejectOnEmpty: true
             })
-            const orderItems = orderModel.items.map((item) => {
-                return new OrderItem(item.id, item.price, item.name, item.quantity,item.product_id)
-            })
-            return new Order(orderModel.id, orderModel.customer_id, orderItems)
+           return this._formatOrder(orderModel);
        } catch (error) {
             throw new Error("Order not found")
        }
     }
-    findAll(): Promise<order[]> {
-        throw new Error("Method not implemented.");
+    async findAll(): Promise<order[]> {
+       const ordersModel = await OrderModel.findAll({ include: ["items"] });
+       return ordersModel.map((order) => this._formatOrder(order))
     }
 
 }

@@ -1,4 +1,5 @@
 import { BelongsTo, Column, ForeignKey, PrimaryKey, Table, Model } from "sequelize-typescript";
+import { SequelizeHooks } from "sequelize/types/hooks";
 import OrderModel from "./order.model";
 import ProductModel from "./product.model";
 
@@ -20,11 +21,11 @@ export default class OrderItemModel extends Model {
   declare product: ProductModel;
 
   @ForeignKey(() => OrderModel)
-  @Column({ allowNull: false })
+  @Column({ allowNull: false, onDelete: 'cascade'})
   declare order_id: string;
 
   @BelongsTo(() => OrderModel)
-  declare order: ProductModel;
+  declare order: OrderModel;
 
   @Column({ allowNull: false })
   declare quantity: number;

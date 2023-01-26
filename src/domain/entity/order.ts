@@ -21,7 +21,7 @@ export default class Order {
       return this._customerId;
     }
     get total(): number {
-        return this._items.reduce((acc, item) => acc + item.price, 0)
+        return this._items.reduce((acc, item) => acc + item.total, 0)
     }
     validate() {
         if (this._id.length === 0) {

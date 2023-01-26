@@ -31,5 +31,4 @@ import {
   
     @Column({ allowNull: false })
     declare total: number;
-  }
-  
+}

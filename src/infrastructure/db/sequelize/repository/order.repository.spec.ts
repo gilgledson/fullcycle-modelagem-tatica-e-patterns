@@ -80,6 +80,34 @@ describe("Order unit test", () => {
             ]
         })
     })
+
+    it('should find all orders', async () => {
+        //create customer
+        const customer = new Customer(uuid(), faker.name.firstName())
+        customer.changeAddress(new Address(
+            faker.address.street(),
+            Number(faker.address.buildingNumber()), 
+            faker.address.zipCode(), 
+            faker.address.city(), 
+            faker.address.country()
+        ));
+        await custoemrRepository.create(customer);
+
+        //create product 
+        const product = new Product(uuid(), faker.commerce.product(), Number(faker.commerce.price()))
+        await productRepository.create(product);
+        
+        //create new order item
+        const orderItem = new OrderItem(uuid(), product.price, product.name, 2, product.id)
+        const order = new Order(uuid(), customer.id, [orderItem])
+
+        await orderRepository.create(order);
+        
+        const orderModel = await orderRepository.findAll();
+        expect(orderModel.length).toBe(1)
+        expect(orderModel).toStrictEqual([order])
+    })
+
     it('should update a order', async () => {
         const customer = new Customer(uuid(), faker.name.firstName())
         customer.changeAddress(new Address(
@@ -129,7 +157,7 @@ describe("Order unit test", () => {
                     product_id: orderItem2.productId,
                     quantity: orderItem2.quantity,
                     price: orderItem2.price,
-                    order_id: orderItem2.id,
+                    order_id: order.id,
                 }
             ]
         })
@@ -160,5 +188,37 @@ describe("Order unit test", () => {
 
         const orderModel = await orderRepository.find(order.id);
         expect(orderModel).toEqual(order);
+    })
+
+    it('should delete a order', async () => {
+        const customer = new Customer(uuid(), faker.name.firstName())
+        customer.changeAddress(new Address(
+            faker.address.street(),
+            Number(faker.address.buildingNumber()), 
+            faker.address.zipCode(), 
+            faker.address.city(), 
+            faker.address.country()
+        ));
+        await custoemrRepository.create(customer);   
+        
+        //create product 
+        const product = new Product(uuid(), faker.commerce.product(), Number(faker.commerce.price()))
+        await productRepository.create(product);
+
+        //create new order item
+        const orderItem = new OrderItem(uuid(), product.price, product.name, 2, product.id)
+        const order = new Order(uuid(), customer.id, [orderItem])
+  
+        await orderRepository.create(order);
+        
+        await orderRepository.delete(order.id);
+        const orderItems = await OrderItemModel.findAll({
+            where: {order_id: order.id}
+        })
+        expect(async () => {
+            await orderRepository.find(order.id);
+        }).rejects.toThrow("Order not found")
+        expect(orderItems.length).toBe(0);
+
     })
 })
